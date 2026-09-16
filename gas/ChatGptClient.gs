@@ -16,9 +16,34 @@ function callChatGpt(prompt) {
   const payload = {
     model: OPENAI_MODEL,
     messages: [{ role: "user", content: prompt }],
-    // モデルがJSONモードに対応していれば、出力形式をより確実にする
-    response_format: { type: "json_object" },
-    temperature: 0.7,
+    // title/body/metaDescriptionの3つを必ず含む形でしか返せないよう、JSON Schemaで強制する
+    // （2026-09-16: 単なるjson_objectモードだと、metaDescriptionを省略した回答が返ることがあったため）
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "seo_article",
+        strict: true,
+        schema: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            body: { type: "string" },
+            metaDescription: { type: "string" },
+          },
+          required: ["title", "body", "metaDescription"],
+          additionalProperties: false,
+        },
+      },
+    },
+    // 2026-09-16: gpt-5.5 は temperature にデフォルト値(1)以外を指定できない
+    // （エラー: "Unsupported value: 'temperature' does not support 0.7 with this model."）ため、
+    // temperatureは指定せずAPI側のデフォルトに任せる。gpt-4o系に戻す場合は temperature: 0.7 を戻すとよい。
+    // 日本語の本文（2,000〜3,000字）+タイトル+メタディスクリプションがJSONで
+    // 途中で切れないよう、余裕を持った上限にしておく（レスポンスが長くなりすぎる心配はない）。
+    // 2026-09-16: gpt-5.5 では `max_tokens` が使えず `max_completion_tokens` に名称変更されていた
+    // （エラー: "Unsupported parameter: 'max_tokens' is not supported with this model."）。
+    // gpt-4o系では逆に max_tokens が必要なため、モデルを戻す場合はここも戻すこと。
+    max_completion_tokens: 4000,
   };
 
   const options = {
