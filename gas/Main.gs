@@ -94,7 +94,7 @@ function processRow(sheet, rowNumber) {
   const article = callChatGpt(prompt);
 
   sheet.getRange(rowNumber, COL.TITLE).setValue(article.title);
-  sheet.getRange(rowNumber, COL.BODY).setValue(article.body);
+  writeBodyToCell(sheet.getRange(rowNumber, COL.BODY), article.body);
   sheet
     .getRange(rowNumber, COL.META_DESCRIPTION)
     .setValue(article.metaDescription);
@@ -104,6 +104,63 @@ function processRow(sheet, rowNumber) {
   sheet.getRange(rowNumber, COL.STATUS).setValue(STATUS.DONE);
 
   notifyWordPress(article);
+}
+
+/**
+ * 本文セルに、見出し（"## "で始まる行）を太字にした状態で書き込む。
+ * スプレッドシートはMarkdownを解釈しないため、"## "の記号は消してその行だけ太字にする。
+ * @param {GoogleAppsScript.Spreadsheet.Range} bodyCell
+ * @param {string} markdownBody ChatGPTが返した本文（見出しは"## "のMarkdown形式）
+ */
+function writeBodyToCell(bodyCell, markdownBody) {
+  const richText = buildRichTextForBody(String(markdownBody));
+  if (richText) {
+    bodyCell.setRichTextValue(richText);
+  } else {
+    bodyCell.setValue(markdownBody);
+  }
+}
+
+/**
+ * Markdownの見出し記法（"## 見出し"）を、記号を取り除いた上で太字装飾にした
+ * RichTextValueを作る。
+ * @param {string} markdownBody
+ * @return {GoogleAppsScript.Spreadsheet.RichTextValue|null} 本文が空の場合はnull
+ */
+function buildRichTextForBody(markdownBody) {
+  const lines = markdownBody.split("\n");
+  const plainLines = [];
+  const boldRanges = [];
+  let offset = 0;
+
+  lines.forEach((line, index) => {
+    const headingMatch = line.match(/^##\s*(.*)$/);
+    const displayLine = headingMatch ? headingMatch[1] : line;
+    plainLines.push(displayLine);
+
+    if (headingMatch && displayLine.length > 0) {
+      boldRanges.push({ start: offset, end: offset + displayLine.length });
+    }
+
+    offset += displayLine.length;
+    if (index < lines.length - 1) {
+      offset += 1; // 改行分
+    }
+  });
+
+  const plainText = plainLines.join("\n");
+  if (plainText.length === 0) {
+    return null;
+  }
+
+  const boldStyle = SpreadsheetApp.newTextStyle().setBold(true).build();
+  const builder = SpreadsheetApp.newRichTextValue().setText(plainText);
+  boldRanges.forEach((range) => {
+    if (range.end > range.start) {
+      builder.setTextStyle(range.start, range.end, boldStyle);
+    }
+  });
+  return builder.build();
 }
 
 /**

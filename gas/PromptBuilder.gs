@@ -40,10 +40,11 @@ function buildPrompt(keyword, subKeywords) {
     "【今回書く記事の条件】",
     `- 対策キーワード: ${keyword}`,
     subKeywords ? `- 関連して触れたい話題: ${subKeywords}` : "",
-    `- 文字数: 本文は${ARTICLE_MIN_LENGTH}〜${ARTICLE_MAX_LENGTH}字程度（日本語の文字数）`,
-    "- 構成: タイトル → 導入文 → 見出し(H2)3つ → まとめ、の順番",
+    `- 文字数: 本文全体で${ARTICLE_MIN_LENGTH}〜${ARTICLE_MAX_LENGTH}字程度（日本語の文字数）`,
+    "- 構成: タイトル → 導入文（300字程度） → 見出し(H2)3つ → まとめ（200字程度）、の順番",
     "- トーン: お手本記事と同じ「カジュアルだけど専門的」な言葉づかい",
     "- 読者: 中小企業の経営者・IT担当者",
+    `- SEO: 対策キーワード「${keyword}」を、本文中に不自然にならない範囲で自然に含めてください（タイトル・導入文・見出しのいずれかにも1回以上含める）`,
     "",
     "【オリジナリティについて（重要）】",
     "- お手本記事や、他のWeb記事の文章をそのまま使わないでください。",
@@ -51,7 +52,7 @@ function buildPrompt(keyword, subKeywords) {
     "",
     "【出力形式】",
     "他の説明文を一切付けず、次のJSON形式のみで出力してください。",
-    '{"title": "記事タイトル", "body": "本文（見出しは##のMarkdown形式）", "metaDescription": "検索結果に出る要約文（100字程度）"}',
+    '{"title": "記事タイトル", "body": "本文（見出しは##のMarkdown形式）", "metaDescription": "検索結果に出る要約文（120字以内）"}',
   ]
     .filter(Boolean)
     .join("\n");
